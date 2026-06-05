@@ -16,7 +16,9 @@ interface FindAllOptions {
 
 @Injectable()
 export class PromptsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService
+
+  ) {}
 
   async create(data: any) {
     if (!data.model_id) {

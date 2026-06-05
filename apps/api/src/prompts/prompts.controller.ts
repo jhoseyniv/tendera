@@ -171,20 +171,24 @@ export class PromptsController {
     return prompt?.versions ?? [];
   }
 @Post(':id/execute')
-  @UseGuards(JwtAuthGuard, WorkspaceAccessGuard)
-  async executePrompt(
-    @Req() req: any,
-    @Param('id') promptId: string,
-    @Body() body: any
-  ) {
-    // tenantId, workspaceId, userId از JWT و WorkspaceAccessGuard گرفته می‌شوند
-    return this.runtimeService.executePrompt(
-      req.user.tenant_id,
-      req.workspaceId,
-      promptId,
-      body.input
-    );
-  }
+@UseGuards(JwtAuthGuard, WorkspaceAccessGuard)
+async executePrompt(
+  @Req() req: any,
+  @Param('id') promptId: string,
+  @Body() body: any
+) {
+  const context = {
+    tenantId: req.user.tenant_id,
+    workspaceId: req.workspaceId,
+    userId: req.user.sub,
+  };
+
+  return this.runtimeService.executePrompt(
+    promptId,    // promptId اولین آرگومان
+  body,
+    context     // context سومین آرگومان
+  );
+}
 
 
 
