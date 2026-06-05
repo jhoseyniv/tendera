@@ -35,93 +35,110 @@ export class PromptRuntimeService {
     return versions[0];
   }
 
- async executePrompt(
-  promptId: string,
-  variables: Record<string, any>,
-  context: { tenantId: string; workspaceId: string; userId: string },
-) {
-  // Load Prompt با Relation ai_model و نسخه‌ها
-  const prompt = await this.prisma.prompts.findFirst({
-    where: {
-      id: promptId,
-      tenant_id: context.tenantId,
-      workspace_id: context.workspaceId,
-      is_active: true,
-    },
-    include: {
-      versions: true,
-      ai_model: true,
-    },
-  });
+  async executePrompt(
+    promptId: string,
+    variables: Record<string, any>,
+    context: { tenantId: string; workspaceId: string; userId: string },
+  ) {
+    // Load Prompt با Relation ai_model و نسخه‌ها
+    const prompt = await this.prisma.prompts.findFirst({
+      where: {
+        id: promptId,
+        tenant_id: context.tenantId,
+        workspace_id: context.workspaceId,
+        is_active: true,
+      },
+      include: {
+        versions: true,
+        ai_model: true,
+      },
+    });
 
-  if (!prompt) throw new NotFoundException('Prompt not found');
+    if (!prompt) throw new NotFoundException('Prompt not found');
 
-  const activeVersion = prompt.versions.find(v => v.is_active);
-  if (!activeVersion) throw new NotFoundException('Active version not found');
+    const activeVersion = prompt.versions.find(v => v.is_active);
+    if (!activeVersion) throw new NotFoundException('Active version not found');
 
-  // Variable Validation
-  if (activeVersion.variable_schema) {
-    this.validator.validateVariables(activeVersion.variable_schema, variables);
-  }
+    // Variable Validation
+    if (activeVersion.variable_schema) {
+      this.validator.validateVariables(activeVersion.variable_schema, variables);
+    }
 
-  // Render user_template
-  const renderedUserTemplate = this.renderer.render(activeVersion.user_template, variables);
+    // Render user_template
+    const renderedUserTemplate = this.renderer.render(activeVersion.user_template, variables);
 
-  // Combine with system_prompt
-  const finalPrompt = `
+    // Combine with system_prompt
+    const finalPrompt = `
 ${activeVersion.system_prompt}
 
 ${renderedUserTemplate}
 `;
 
-  // Check AI model
-  if (!prompt.ai_model) {
-    throw new BadRequestException('Prompt does not have AI model assigned');
-  }
+    // Check AI model
+    if (!prompt.ai_model) {
+      throw new BadRequestException('Prompt does not have AI model assigned');
+    }
 
-  // Execute AI
-  const aiResult = await this.aiService.execute(finalPrompt, prompt.ai_model.api_model);
+    // Execute AI
+    const aiResult = await this.aiService.execute(finalPrompt, prompt.ai_model.api_model);
 
-  // Log Execution
-  await this.prisma.ai_executions.create({
-    data: {
-      tenant_id: context.tenantId,
-      workspace_id: context.workspaceId,
-      user_id: context.userId,
-      prompt_id: prompt.id,
-      prompt_version_id: activeVersion.id,
-      model: prompt.ai_model.api_model,
-      variables,
-      rendered_prompt: finalPrompt,
-      output: JSON.stringify(aiResult),
-      status: 'success',
-      prompt_tokens:  aiResult.usage?.prompt_tokens ?? 0,
-      completion_tokens: aiResult.usage?.completion_tokens ?? 0,
-      total_tokens: aiResult.usage?.total_tokens ?? 0,
+    // Log Execution
+    await this.prisma.ai_executions.create({
+      data: {
+        tenant_id: context.tenantId,
+        workspace_id: context.workspaceId,
+        user_id: context.userId,
+        prompt_id: prompt.id,
+        prompt_version_id: activeVersion.id,
+        model: prompt.ai_model.api_model,
+        variables,
+        rendered_prompt: finalPrompt,
+        output: JSON.stringify(aiResult),
+        status: 'success',
+        prompt_tokens: aiResult.usage?.prompt_tokens ?? 0,
+        completion_tokens: aiResult.usage?.completion_tokens ?? 0,
+        total_tokens: aiResult.usage?.total_tokens ?? 0,
+      },
+    });
 
-   },
-  });
+    // Update اتوماتیک Usage Counters
+    let usageCounter = await this.prisma.usage_counters.findFirst({
+      where: { tenant_id: context.tenantId },
+    });
 
-      // Step 2: Update Usage Counters
+    if (usageCounter) {
       await this.prisma.usage_counters.update({
-        where: { tenant_id: context.tenantId },
+        where: { id: usageCounter.id },
         data: {
-          ai_tokens_used: {
-            increment: aiResult.usage?.total_tokens ?? 0,
-          },
+          ai_tokens_used: { increment: aiResult.usage?.total_tokens ?? 0 },
           updated_at: new Date(),
         },
       });
+    } else {
+      // اگر رکورد موجود نبود، ایجاد کن
+      usageCounter = await this.prisma.usage_counters.create({
+        data: {
+          tenant_id: context.tenantId,
+          ai_tokens_used: aiResult.usage?.total_tokens ?? 0,
+          storage_used_bytes: 0,
+          workspace_count: 0,
+          user_count: 0,
+          updated_at: new Date(),
+        },
+      });
+    }
 
-  return {
-    output: aiResult.output,
-    version: activeVersion.version,
-    promptId: prompt.id,
-    model: prompt.ai_model.name,
-    provider: prompt.ai_model.provider,
-    usage: aiResult.usage,
-  };
-}
+    // بازگرداندن نتیجه
+    return {
+      output: finalPrompt,
+      version: activeVersion.version,
+      promptId: prompt.id,
+      model: prompt.ai_model.name,
+      provider: prompt.ai_model.provider,
+      usage: aiResult.usage,
+    };
+  }
+
   // متد رندر نسخه مشخص
   async renderVersion(promptVersionId: string, variables: Record<string, any>) {
     const version = await this.prisma.prompt_versions.findUnique({ where: { id: promptVersionId } });

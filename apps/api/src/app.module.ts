@@ -55,6 +55,8 @@ import {
 
 } from './model/models.module';
 
+import { TenantsModule } from './tenants/tenants.module';
+
 @Module({
 
   imports: [
@@ -65,7 +67,9 @@ import {
      PromptsModule,
     AIModule ,
     ExecutionsModule,
-    ModelsModule
+    ModelsModule ,
+    TenantsModule,
+
   ],
 })
 

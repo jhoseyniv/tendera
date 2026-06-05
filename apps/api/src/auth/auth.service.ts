@@ -38,6 +38,7 @@ export class AuthService {
 
   ) {}
 
+  
   async login(
 
     email: string,
@@ -46,6 +47,8 @@ export class AuthService {
 
   ) {
 
+  
+  
     const user =
       await this.prisma.user.findFirst({
 
@@ -98,6 +101,12 @@ const workspaceMember =
       }
     });
 
+  const userRoles = await this.prisma.userRole.findMany({  // توجه: userRole نه userRoles
+    where: { user_id: user.id },
+    include: { role: true }  // برای گرفتن role.code
+  });
+
+  const roles = userRoles.map(ur => ur.role.code);
 
 const access_token =
   this.jwtService.sign({
@@ -111,7 +120,8 @@ const access_token =
     tenant_id:
       user.tenant_id,
 
-    workspace_id: workspaceMember ?.workspace_id
+    workspace_id: workspaceMember ?.workspace_id ,
+    roles 
   });
 
 
@@ -155,4 +165,7 @@ const access_token =
       }
     };
   }
+
+  
+
 }
