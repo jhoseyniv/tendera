@@ -1,0 +1,417 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                 String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenant_id          String               @db.Uuid
+  firstName          String?              @map("first_name") @db.VarChar(100)
+  lastName           String?              @map("last_name") @db.VarChar(100)
+  email              String               @db.VarChar(255)
+  passwordHash       String?              @map("password_hash")
+  last_login_at      DateTime?            @db.Timestamp(6)
+  created_by         String?              @db.Uuid
+  updated_by         String?              @db.Uuid
+  createdAt          DateTime             @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt          DateTime             @default(now()) @map("updated_at") @db.Timestamp(6)
+  deleted_at         DateTime?            @db.Timestamp(6)
+  is_deleted         Boolean              @default(false)
+  audit_logs         audit_logs[]
+  policy_assignments policy_assignments[]
+  storage_objects    storage_objects[]
+  userRoles          UserRole[]
+  tenants            tenants              @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_users_tenant")
+  workspace_members  workspace_members[]
+
+  @@unique([tenant_id, email], map: "uq_users_tenant_email")
+  @@map("users")
+}
+
+model Role {
+  id                  String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenant_id           String               @db.Uuid
+  name                String               @db.VarChar(100)
+  code                String               @db.VarChar(100)
+  description         String?
+  created_at          DateTime             @default(now()) @db.Timestamp(6)
+  created_by          String?              @db.Uuid
+  updated_by          String?              @db.Uuid
+  rolePagePermissions RolePagePermission[]
+  role_permissions    role_permissions[]
+  tenants             tenants              @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_roles_tenant")
+  userRoles           UserRole[]
+  workspace_members   workspace_members[]
+
+  @@unique([tenant_id, name], map: "uq_roles_tenant_name")
+  @@map("roles")
+}
+
+model UserRole {
+  user_id String @db.Uuid
+  role_id String @db.Uuid
+  role    Role   @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_roles_role")
+  user    User   @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_roles_user")
+
+  @@id([user_id, role_id])
+  @@map("user_roles")
+}
+
+model RolePagePermission {
+  role_id            String         @db.Uuid
+  page_permission_id String         @db.Uuid
+  pagePermission     PagePermission @relation(fields: [page_permission_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_role_permissions_page_permission")
+  role               Role           @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_role_permissions_role")
+
+  @@id([role_id, page_permission_id])
+  @@map("role_page_permissions")
+}
+
+model PagePermission {
+  id                  String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  page_code           String               @unique @db.VarChar(255)
+  page_name           String               @db.VarChar(255)
+  route_path          String?              @db.VarChar(255)
+  description         String?
+  parent_id           String?              @db.Uuid
+  icon                String?
+  sort_order          Int?                 @default(0)
+  parent              PagePermission?      @relation("PageTree", fields: [parent_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_page_permissions_parent")
+  children            PagePermission[]     @relation("PageTree")
+  rolePagePermissions RolePagePermission[]
+
+  @@map("page_permissions")
+}
+
+model ai_contexts {
+  id                 String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenant_id          String      @db.Uuid
+  workspace_id       String?     @db.Uuid
+  vector_namespace   String?     @db.VarChar(255)
+  graph_namespace    String?     @db.VarChar(255)
+  embedding_provider String?     @db.VarChar(100)
+  llm_provider       String?     @db.VarChar(100)
+  ai_enabled         Boolean     @default(true)
+  created_at         DateTime    @default(now()) @db.Timestamp(6)
+  created_by         String?     @db.Uuid
+  updated_by         String?     @db.Uuid
+  tenants            tenants     @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_ai_context_tenant")
+  workspaces         workspaces? @relation(fields: [workspace_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_ai_context_workspace")
+}
+
+model api_keys {
+  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenant_id   String    @db.Uuid
+  key_hash    String    @unique
+  description String?
+  created_at  DateTime  @default(now()) @db.Timestamp(6)
+  expires_at  DateTime? @db.Timestamp(6)
+  tenants     tenants   @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_api_keys_tenant")
+}
+
+model audit_logs {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenant_id     String?  @db.Uuid
+  user_id       String?  @db.Uuid
+  action        String   @db.VarChar(255)
+  resource_type String?  @db.VarChar(255)
+  resource_id   String?  @db.Uuid
+  metadata      Json?
+  created_at    DateTime @default(now()) @db.Timestamp(6)
+  tenants       tenants? @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_audit_tenant")
+  users         User?    @relation(fields: [user_id], references: [id], onUpdate: NoAction, map: "fk_audit_user")
+}
+
+model events {
+  id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenant_id      String?  @db.Uuid
+  event_type     String   @db.VarChar(255)
+  payload        Json
+  correlation_id String?  @db.Uuid
+  causation_id   String?  @db.Uuid
+  published_at   DateTime @default(now()) @db.Timestamp(6)
+  created_by     String?  @db.Uuid
+  tenants        tenants? @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_event_tenant")
+}
+
+model permissions {
+  id               String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  code             String             @unique @db.VarChar(255)
+  description      String?
+  role_permissions role_permissions[]
+}
+
+model plans {
+  id             String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name           String          @db.VarChar(100)
+  code           String          @unique @db.VarChar(100)
+  max_workspaces Int?
+  max_users      Int?
+  max_storage_gb Int?
+  ai_enabled     Boolean         @default(true)
+  created_at     DateTime        @default(now()) @db.Timestamp(6)
+  subscriptions  subscriptions[]
+}
+
+model policies {
+  id                 String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenant_id          String?              @db.Uuid
+  policy_type        String               @db.VarChar(100)
+  policy_key         String               @db.VarChar(255)
+  value              Json
+  is_system          Boolean              @default(false)
+  created_at         DateTime             @default(now()) @db.Timestamp(6)
+  created_by         String?              @db.Uuid
+  updated_by         String?              @db.Uuid
+  tenants            tenants?             @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_policy_tenant")
+  policy_assignments policy_assignments[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model policy_assignments {
+  id           String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  policy_id    String      @db.Uuid
+  workspace_id String?     @db.Uuid
+  user_id      String?     @db.Uuid
+  assigned_at  DateTime    @default(now()) @db.Timestamp(6)
+  policies     policies    @relation(fields: [policy_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_policy_assignment_policy")
+  users        User?       @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_policy_assignment_user")
+  workspaces   workspaces? @relation(fields: [workspace_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_policy_assignment_workspace")
+}
+
+model provisioning_jobs {
+  id                 String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenant_id          String?              @db.Uuid
+  job_type           String               @db.VarChar(100)
+  started_at         DateTime?            @db.Timestamp(6)
+  completed_at       DateTime?            @db.Timestamp(6)
+  error_message      String?
+  created_at         DateTime             @default(now()) @db.Timestamp(6)
+  created_by         String?              @db.Uuid
+  updated_by         String?              @db.Uuid
+  tenants            tenants?             @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_provisioning_tenant")
+  provisioning_steps provisioning_steps[]
+}
+
+model provisioning_steps {
+  id                String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  job_id            String            @db.Uuid
+  step_name         String            @db.VarChar(255)
+  logs              String?
+  started_at        DateTime?         @db.Timestamp(6)
+  completed_at      DateTime?         @db.Timestamp(6)
+  provisioning_jobs provisioning_jobs @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_provisioning_steps_job")
+}
+
+model role_permissions {
+  role_id       String      @db.Uuid
+  permission_id String      @db.Uuid
+  permissions   permissions @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_role_permissions_permission")
+  roles         Role        @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_role_permissions_role")
+
+  @@id([role_id, permission_id])
+}
+
+model storage_objects {
+  id              String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenant_id       String      @db.Uuid
+  workspace_id    String?     @db.Uuid
+  object_key      String      @unique(map: "uq_storage_object_key")
+  file_name       String
+  content_type    String?     @db.VarChar(255)
+  size_bytes      BigInt?
+  uploaded_by     String?     @db.Uuid
+  is_ai_generated Boolean?    @default(false)
+  created_at      DateTime    @default(now()) @db.Timestamp(6)
+  created_by      String?     @db.Uuid
+  tenants         tenants     @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_storage_tenant")
+  users           User?       @relation(fields: [uploaded_by], references: [id], onUpdate: NoAction, map: "fk_storage_uploaded_by")
+  workspaces      workspaces? @relation(fields: [workspace_id], references: [id], onUpdate: NoAction, map: "fk_storage_workspace")
+}
+
+model subscriptions {
+  id         String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenant_id  String    @unique @db.Uuid
+  plan_id    String    @db.Uuid
+  starts_at  DateTime? @db.Timestamp(6)
+  ends_at    DateTime? @db.Timestamp(6)
+  created_at DateTime  @default(now()) @db.Timestamp(6)
+  plans      plans     @relation(fields: [plan_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_subscription_plan")
+  tenants    tenants   @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_subscription_tenant")
+}
+
+model tenant_branding {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenant_id       String   @unique @db.Uuid
+  logo_url        String?
+  primary_color   String?  @db.VarChar(20)
+  secondary_color String?  @db.VarChar(20)
+  created_at      DateTime @default(now()) @db.Timestamp(6)
+  created_by      String?  @db.Uuid
+  updated_by      String?  @db.Uuid
+  tenants         tenants  @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_tenant_branding_tenant")
+}
+
+model tenant_settings {
+  id               String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenant_id        String   @unique @db.Uuid
+  default_language String?  @db.VarChar(20)
+  default_timezone String?  @db.VarChar(100)
+  ai_enabled       Boolean  @default(true)
+  voice_enabled    Boolean  @default(false)
+  created_at       DateTime @default(now()) @db.Timestamp(6)
+  updated_at       DateTime @default(now()) @db.Timestamp(6)
+  created_by       String?  @db.Uuid
+  updated_by       String?  @db.Uuid
+  tenants          tenants  @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_tenant_settings_tenant")
+}
+
+model tenants {
+  id                String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name              String              @db.VarChar(255)
+  normalized_name   String              @unique(map: "uq_tenant_normalized_name") @db.VarChar(255)
+  slug              String              @db.VarChar(255)
+  primary_domain    String?             @unique(map: "uq_tenant_domain") @db.VarChar(255)
+  industry          String?             @db.VarChar(255)
+  country           String?             @db.VarChar(100)
+  language          String?             @db.VarChar(20)
+  timezone          String?             @db.VarChar(100)
+  is_active         Boolean             @default(true)
+  created_by        String?             @db.Uuid
+  updated_by        String?             @db.Uuid
+  version           Int                 @default(1)
+  created_at        DateTime            @default(now()) @db.Timestamp(6)
+  updated_at        DateTime            @default(now()) @db.Timestamp(6)
+  deleted_at        DateTime?           @db.Timestamp(6)
+  ai_contexts       ai_contexts[]
+  api_keys          api_keys[]
+  audit_logs        audit_logs[]
+  events            events[]
+  policies          policies[]
+  provisioning_jobs provisioning_jobs[]
+  roles             Role[]
+  storage_objects   storage_objects[]
+  subscriptions     subscriptions?
+  tenant_branding   tenant_branding?
+  tenant_settings   tenant_settings?
+  usage_counters    usage_counters[]
+  users             User[]
+  workspaces        workspaces[]
+}
+
+model usage_counters {
+  id                 String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenant_id          String   @db.Uuid
+  ai_tokens_used     BigInt   @default(0)
+  storage_used_bytes BigInt   @default(0)
+  workspace_count    Int      @default(0)
+  user_count         Int      @default(0)
+  updated_at         DateTime @default(now()) @db.Timestamp(6)
+  tenants            tenants  @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_usage_tenant")
+}
+
+model workspace_members {
+  id           String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  workspace_id String     @db.Uuid
+  user_id      String     @db.Uuid
+  role_id      String?    @db.Uuid
+  joined_at    DateTime   @default(now()) @db.Timestamp(6)
+  is_active    Boolean    @default(true)
+  roles        Role?      @relation(fields: [role_id], references: [id], onUpdate: NoAction, map: "fk_workspace_members_role")
+  users        User       @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_workspace_members_user")
+  workspaces   workspaces @relation(fields: [workspace_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_workspace_members_workspace")
+}
+
+model workspaces {
+  id                 String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenant_id          String               @db.Uuid
+  name               String               @db.VarChar(255)
+  code               String?              @db.VarChar(100)
+  country            String?              @db.VarChar(100)
+  region             String?              @db.VarChar(100)
+  created_by         String?              @db.Uuid
+  updated_by         String?              @db.Uuid
+  created_at         DateTime             @default(now()) @db.Timestamp(6)
+  updated_at         DateTime             @default(now()) @db.Timestamp(6)
+  archived_at        DateTime?            @db.Timestamp(6)
+  status             String               @default("active") @db.VarChar(50)
+  ai_contexts        ai_contexts[]
+  policy_assignments policy_assignments[]
+  storage_objects    storage_objects[]
+  workspace_members  workspace_members[]
+  tenants            tenants              @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_workspace_tenant")
+
+  @@unique([tenant_id, code], map: "uq_workspace_tenant_code")
+  @@unique([tenant_id, name], map: "uq_workspace_tenant_name")
+}
+
+model prompts {
+  id            String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id     String?           @db.Uuid
+  workspace_id  String?           @db.Uuid
+  name          String            @db.VarChar(255)
+  category      String            @db.VarChar(100)
+  version       String?           @default("v1.0") @db.VarChar(50)
+  temperature   Decimal?          @default(0.30) @db.Decimal(3, 2)
+  system_prompt String
+  user_template String
+  variables     Json?
+  is_active     Boolean?          @default(true)
+  created_by    String?           @db.Uuid
+  created_at    DateTime?         @default(now()) @db.Timestamp(6)
+  model_id String? @db.Uuid
+  ai_model ai_models? @relation( fields: [model_id],references: [id])
+  versions      prompt_versions[]
+}
+
+model prompt_versions {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  prompt_id       String    @db.Uuid
+  version         String    @db.VarChar(50)
+  system_prompt   String
+  user_template   String
+  variable_schema Json?
+  is_active       Boolean?  @default(true)
+  created_by      String?   @db.Uuid
+  created_at      DateTime? @default(now()) @db.Timestamp(6)
+  prompt          prompts   @relation(fields: [prompt_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_prompt_versions_prompt")
+
+  @@map("prompt_versions")
+}
+
+model ai_executions {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id         String?   @db.Uuid
+  workspace_id      String?   @db.Uuid
+  prompt_id         String?   @db.Uuid
+  prompt_version_id String?   @db.Uuid
+  user_id           String?   @db.Uuid
+  model             String?   @db.VarChar(100)
+  variables         Json?
+  rendered_prompt   String?
+  output            String?
+  status            String?   @default("success") @db.VarChar(50)
+  created_at        DateTime? @default(now()) @db.Timestamp(6)
+  error_message     String?
+  prompt_tokens     Int?
+  completion_tokens Int?
+  total_tokens      Int?
+
+  @@map("ai_executions")
+}
+
+model ai_models {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id    String   @db.Uuid
+  workspace_id String?  @db.Uuid
+  name         String   @db.VarChar(255)
+  provider     String   @db.VarChar(100)
+  api_model    String   @db.VarChar(255)
+  is_active    Boolean  @default(true)
+  prompts prompts[]
+  created_by   String?  @db.Uuid
+  created_at   DateTime @default(now()) @db.Timestamp(6)
+}
