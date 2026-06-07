@@ -51,14 +51,13 @@ export class PlatformRoleGuard
       return false;
     }
 
-    const hasRole =
-      requiredRoles.some(
-        role =>
-          user.roles?.includes(
-            role,
-          ),
-      );
-
+   const hasRole =
+  requiredRoles.some(
+    role =>
+      user.platform_roles?.includes(
+        role,
+      ),
+  );
     if (!hasRole) {
       throw new ForbiddenException(
         'Insufficient permissions',

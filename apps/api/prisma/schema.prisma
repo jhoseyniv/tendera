@@ -26,6 +26,7 @@ model User {
   userRoles          UserRole[]
   tenants            tenants              @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_users_tenant")
   workspace_members  workspace_members[]
+  platformUserRoles  PlatformUserRole[]
 
   @@unique([tenant_id, email], map: "uq_users_tenant_email")
   @@map("users")
@@ -50,6 +51,47 @@ model Role {
   @@map("roles")
 }
 
+model PlatformRole {
+  id String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+
+  name String @db.VarChar(100)
+  code String @unique @db.VarChar(100)
+
+  description String?
+
+  created_at DateTime @default(now()) @db.Timestamp(6)
+
+  created_by String? @db.Uuid
+  updated_by String? @db.Uuid
+
+  userRoles           PlatformUserRole[]
+  rolePagePermissions PlatformRolePagePermission[]
+
+  @@map("platform_roles")
+}
+
+model PlatformUserRole {
+  user_id          String @db.Uuid
+  platform_role_id String @db.Uuid
+
+  user         User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  platformRole PlatformRole @relation(fields: [platform_role_id], references: [id], onDelete: Cascade)
+
+  @@id([user_id, platform_role_id])
+  @@map("platform_user_roles")
+}
+
+model PlatformRolePagePermission {
+  platform_role_id   String @db.Uuid
+  page_permission_id String @db.Uuid
+
+  platformRole   PlatformRole   @relation(fields: [platform_role_id], references: [id], onDelete: Cascade)
+  pagePermission PagePermission @relation(fields: [page_permission_id], references: [id], onDelete: Cascade)
+
+  @@id([platform_role_id, page_permission_id])
+  @@map("platform_role_page_permissions")
+}
+
 model UserRole {
   user_id String @db.Uuid
   role_id String @db.Uuid
@@ -71,17 +113,18 @@ model RolePagePermission {
 }
 
 model PagePermission {
-  id                  String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  page_code           String               @unique @db.VarChar(255)
-  page_name           String               @db.VarChar(255)
-  route_path          String?              @db.VarChar(255)
-  description         String?
-  parent_id           String?              @db.Uuid
-  icon                String?
-  sort_order          Int?                 @default(0)
-  parent              PagePermission?      @relation("PageTree", fields: [parent_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_page_permissions_parent")
-  children            PagePermission[]     @relation("PageTree")
-  rolePagePermissions RolePagePermission[]
+  id                      String                       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  page_code               String                       @unique @db.VarChar(255)
+  page_name               String                       @db.VarChar(255)
+  route_path              String?                      @db.VarChar(255)
+  description             String?
+  parent_id               String?                      @db.Uuid
+  icon                    String?
+  sort_order              Int?                         @default(0)
+  parent                  PagePermission?              @relation("PageTree", fields: [parent_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_page_permissions_parent")
+  children                PagePermission[]             @relation("PageTree")
+  rolePagePermissions     RolePagePermission[]
+  platformRolePermissions PlatformRolePagePermission[]
 
   @@map("page_permissions")
 }
@@ -311,7 +354,6 @@ model usage_counters {
   user_count         Int      @default(0)
   updated_at         DateTime @default(now()) @db.Timestamp(6)
   tenants            tenants  @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_usage_tenant")
-
 }
 
 model workspace_members {
@@ -363,8 +405,8 @@ model prompts {
   is_active     Boolean?          @default(true)
   created_by    String?           @db.Uuid
   created_at    DateTime?         @default(now()) @db.Timestamp(6)
-  model_id String? @db.Uuid
-  ai_model ai_models? @relation( fields: [model_id],references: [id])
+  model_id      String?           @db.Uuid
+  ai_model      ai_models?        @relation(fields: [model_id], references: [id])
   versions      prompt_versions[]
 }
 
@@ -405,14 +447,14 @@ model ai_executions {
 }
 
 model ai_models {
-  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id    String   @db.Uuid
-  workspace_id String?  @db.Uuid
-  name         String   @db.VarChar(255)
-  provider     String   @db.VarChar(100)
-  api_model    String   @db.VarChar(255)
-  is_active    Boolean  @default(true)
-  prompts prompts[]
-  created_by   String?  @db.Uuid
-  created_at   DateTime @default(now()) @db.Timestamp(6)
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id    String    @db.Uuid
+  workspace_id String?   @db.Uuid
+  name         String    @db.VarChar(255)
+  provider     String    @db.VarChar(100)
+  api_model    String    @db.VarChar(255)
+  is_active    Boolean   @default(true)
+  prompts      prompts[]
+  created_by   String?   @db.Uuid
+  created_at   DateTime  @default(now()) @db.Timestamp(6)
 }

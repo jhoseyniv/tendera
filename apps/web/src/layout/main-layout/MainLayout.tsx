@@ -11,7 +11,8 @@ import {
 
 import Sidebar
 from '@/layout/sidebar/Sidebar';
-
+import AppTopbar
+from '@/layout/topbar/AppTopbar';
 export default function MainLayout({
   children
 }: {
@@ -50,18 +51,29 @@ export default function MainLayout({
 
   return (
 
+  <div
+    style={{
+      display: 'flex',
+    }}
+  >
+
+    <Sidebar />
+
     <div
       style={{
-        display: 'flex'
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '100vh',
       }}
     >
 
-      <Sidebar />
+      <AppTopbar />
 
       <div
         style={{
           flex: 1,
-          padding: '20px'
+          padding: '20px',
         }}
       >
 
@@ -70,5 +82,7 @@ export default function MainLayout({
       </div>
 
     </div>
-  );
+
+  </div>
+);
 }

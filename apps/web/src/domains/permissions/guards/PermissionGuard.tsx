@@ -1,50 +1,126 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/domains/auth/store/auth.store';
+
+import {
+  useEffect,
+  useState,
+} from 'react';
+
+import {
+  useRouter,
+} from 'next/navigation';
+
+import {
+  useAuthStore,
+} from '@/domains/auth/store/auth.store';
 
 interface Props {
+
   permission: string;
+
   children: React.ReactNode;
 }
 
-export default function PermissionGuard({ permission, children }: Props) {
-  const router = useRouter();
-  const pages = useAuthStore((s) => s.pages);
-  const [allowed, setAllowed] = useState(false);
-  const [loading, setLoading] = useState(true);
+export default function PermissionGuard({
+
+  permission,
+
+  children,
+
+}: Props) {
+
+  const router =
+    useRouter();
+
+  const pages =
+    useAuthStore(
+      (s) => s.pages,
+    );
+
+  const [allowed, setAllowed] =
+    useState(false);
+
+  const [loading, setLoading] =
+    useState(true);
 
   useEffect(() => {
-    const checkPermission = async () => {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        router.push('/not-authorized');
-        return;
-      }
 
-      // اگر pages خالی است هنوز fetch نشده
-      if (pages.length === 0) {
-        setLoading(true);
-        return;
-      }
+    const checkPermission =
+      async () => {
 
-      const hasPermission = pages.some((p) => p.page_code === permission);
-      if (!hasPermission) {
-        router.push('/not-authorized');
-        return;
-      }
+        const token =
+          localStorage.getItem(
+            'access_token',
+          );
 
-      setAllowed(true);
-      setLoading(false);
+        // Not Authenticated
+        if (!token) {
 
-      console.log('pages from cache/API:', pages);
-      console.log('required permission:', permission);
-    };
+          setAllowed(false);
+
+          setLoading(false);
+
+          router.push(
+            '/login',
+          );
+
+          return;
+        }
+
+        // Pages هنوز لود نشده
+        if (pages.length === 0) {
+
+          setLoading(true);
+
+          return;
+        }
+
+        const hasPermission =
+          pages.some(
+            (p) =>
+              p.page_code ===
+              permission,
+          );
+
+        // Authenticated ولی Unauthorized
+        if (!hasPermission) {
+
+          setAllowed(false);
+
+          setLoading(false);
+
+          router.push(
+            '/not-authorized',
+          );
+
+          return;
+        }
+
+        setAllowed(true);
+
+        setLoading(false);
+      };
 
     checkPermission();
-  }, [pages, permission, router]);
 
-  if (loading) return null; // یا می‌توان spinner گذاشت
-  if (!allowed) return null; // هنوز redirect نشده
+  }, [
+
+    pages,
+
+    permission,
+
+    router,
+
+  ]);
+
+  if (loading) {
+
+    return null;
+  }
+
+  if (!allowed) {
+
+    return null;
+  }
+
   return <>{children}</>;
 }

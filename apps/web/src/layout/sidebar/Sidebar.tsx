@@ -146,14 +146,7 @@ export default function Sidebar() {
     activeWorkspace
   ]);
 
-  const handleLogout = () => {
-
-    logout();
-
-    window.location.href =
-      '/login';
-  };
-
+  
   const renderChildren = (
 
     parentId: string
@@ -349,33 +342,7 @@ export default function Sidebar() {
           ))}
       </ul>
 
-      <button
-
-        onClick={handleLogout}
-
-        style={{
-
-          marginTop: '20px',
-
-          width: '100%',
-
-          padding: '10px',
-
-          background: '#dc2626',
-
-          color: 'white',
-
-          border: 'none',
-
-          borderRadius: '8px',
-
-          cursor: 'pointer',
-        }}
-      >
-
-        Logout
-
-      </button>
+     
 
     </div>
   );

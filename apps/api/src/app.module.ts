@@ -1,5 +1,6 @@
 import { ExecutionsModule } from './executions/executions.module';
 
+import { RolesModule } from './roles/roles.module';
 import {
 
   Module,
@@ -56,6 +57,8 @@ import {
 } from './model/models.module';
 
 import { TenantsModule } from './tenants/tenants.module';
+import { PermissionsModule }
+from './modules/permissions/permissions.module';
 
 @Module({
 
@@ -69,6 +72,8 @@ import { TenantsModule } from './tenants/tenants.module';
     ExecutionsModule,
     ModelsModule ,
     TenantsModule,
+    RolesModule,
+    PermissionsModule,
 
   ],
 })
