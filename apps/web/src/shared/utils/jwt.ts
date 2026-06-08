@@ -16,3 +16,19 @@ export function getJwtPayload() {
     atob(payload),
   );
 }
+
+export function getTenantId() {
+
+  const payload =
+    getJwtPayload();
+
+  return payload?.tenant_id;
+}
+
+export function getUserId() {
+
+  const payload =
+    getJwtPayload();
+
+  return payload?.sub;
+}

@@ -23,13 +23,16 @@ export default function AppToolbar({
       sx={{
         mb: 2,
         display: 'flex',
-        justifyContent: 'flex-end',
-        alignItems: 'center',
+        justifyContent:
+          'space-between',
+        alignItems:
+          'center',
       }}
     >
 
       {children}
 
     </Box>
+
   );
 }

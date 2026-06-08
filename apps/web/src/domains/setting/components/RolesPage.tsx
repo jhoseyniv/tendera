@@ -1,14 +1,18 @@
 'use client';
 
 import {
-useEffect,
-useState,
+  useEffect,
+  useState,
 } from 'react';
 
 import {
-Button,
-Chip,
+  Button,
+  Chip,
 } from '@mui/material';
+
+import {
+  useRouter,
+} from 'next/navigation';
 
 import AppPage
 from '@/shared/components/layout/AppPage';
@@ -21,13 +25,12 @@ from '@/shared/components/data/AppTable';
 
 import AIActionPanel
 from '@/shared/components/ai/AIActionPanel';
-import { useRouter }
-from 'next/navigation';
+
 import {
-getRoles,
-createRole,
-updateRole,
-deleteRole,
+  getRoles,
+  createRole,
+  updateRole,
+  deleteRole,
 } from '../api/roles.api';
 
 import CreateRoleDialog
@@ -43,385 +46,493 @@ import RoleActions
 from './RoleActions';
 
 import {
-getJwtPayload,
+  getJwtPayload,
 } from '@/shared/utils/jwt';
 
 interface Role {
 
-id: string;
+  id: string;
 
-tenant_id?: string;
+  tenant_id?: string;
 
-name: string;
+  name: string;
 
-code: string;
+  code: string;
 
-description?: string;
+  description?: string;
 }
 
-export default function RolesPage() {
+export default function
+RolesPage() {
 
-const [
-roles,
-setRoles,
-] = useState<Role[]>([]);
+  const router =
+    useRouter();
 
-const [
-loading,
-setLoading,
-] = useState(false);
+  const [
+    roles,
+    setRoles,
+  ] = useState<Role[]>([]);
 
-const [
-createOpen,
-setCreateOpen,
-] = useState(false);
+  const [
+    loading,
+    setLoading,
+  ] = useState(false);
 
-const [
-editOpen,
-setEditOpen,
-] = useState(false);
+  const [
+    search,
+    setSearch,
+  ] = useState('');
 
-const [
-deleteOpen,
-setDeleteOpen,
-] = useState(false);
+  const [
+    page,
+    setPage,
+  ] = useState(1);
 
-const [
-selectedRole,
-setSelectedRole,
-] = useState<Role | null>(null);
+  const pageSize = 10;
 
-useEffect(() => {
-loadRoles();
+  const [
+    createOpen,
+    setCreateOpen,
+  ] = useState(false);
 
-}, []);
+  const [
+    editOpen,
+    setEditOpen,
+  ] = useState(false);
 
-async function loadRoles() {
+  const [
+    deleteOpen,
+    setDeleteOpen,
+  ] = useState(false);
 
-try {
-
-  setLoading(true);
-
-  const data =
-    await getRoles();
-
-  setRoles(data);
-
-} catch (error) {
-
-  console.error(
-    'Load roles failed',
-    error,
+  const [
+    selectedRole,
+    setSelectedRole,
+  ] = useState<Role | null>(
+    null,
   );
 
-} finally {
+  useEffect(() => {
 
-  setLoading(false);
-}
+    loadRoles();
 
-}
+  }, []);
 
-async function handleCreateRole(
-data: {
-name: string;
-code: string;
-description: string;
-},
-) {
+  async function loadRoles() {
 
-try {
+    try {
 
-  const payload =
-    getJwtPayload();
+      setLoading(true);
 
-  if (!payload?.tenant_id) {
+      const data =
+        await getRoles();
 
-    throw new Error(
-      'Tenant ID not found in token',
-    );
+      setRoles(data);
+
+    } catch (error) {
+
+      console.error(
+        error,
+      );
+
+    } finally {
+
+      setLoading(false);
+    }
   }
 
-  await createRole({
+  async function handleCreateRole(
+    data: {
+      name: string;
+      code: string;
+      description: string;
+    },
+  ) {
 
-    tenant_id:
-      payload.tenant_id,
+    try {
 
-    name:
-      data.name,
+      const payload =
+        getJwtPayload();
 
-    code:
-      data.code,
+      await createRole({
 
-    description:
-      data.description,
-  });
+        tenant_id:
+          payload?.tenant_id,
 
-  await loadRoles();
+        name:
+          data.name,
 
-} catch (error) {
+        code:
+          data.code,
 
-  console.error(
-    'Create role failed',
-    error,
-  );
-}
+        description:
+          data.description,
+      });
 
-}
+      await loadRoles();
 
-async function handleEditRole(
-id: string,
-data: {
-name: string;
-code: string;
-description: string;
-},
-) {
+    } catch (error) {
 
-try {
+      console.error(
+        error,
+      );
+    }
+  }
 
-  await updateRole(
-    id,
-    data,
-  );
+  async function handleEditRole(
+    id: string,
+    data: {
+      name: string;
+      code: string;
+      description: string;
+    },
+  ) {
 
-  setEditOpen(
-    false,
-  );
-
-  setSelectedRole(
-    null,
-  );
-
-  await loadRoles();
-
-} catch (error) {
-
-  console.error(
-    'Update role failed',
-    error,
-  );
-}
-
-}
-
-async function handleDeleteRole() {
-
-if (
-  !selectedRole
-) {
-  return;
-}
-
-try {
-
-  await deleteRole(
-    selectedRole.id,
-  );
-
-  setDeleteOpen(
-    false,
-  );
-
-  setSelectedRole(
-    null,
-  );
-
-  await loadRoles();
-
-} catch (error) {
-
-  console.error(
-    'Delete role failed',
-    error,
-  );
-}
-
-}
-const router =
-  useRouter();
-const columns = [
-
-{
-  field: 'name',
-
-  headerName: 'Name',
-},
-
-{
-  field: 'code',
-
-  headerName: 'Code',
-
-  render:
-    (row: Role) => (
-
-      <Chip
-        size="small"
-        label={row.code}
-      />
-
-    ),
-},
-
-{
-  field: 'description',
-
-  headerName:
-    'Description',
-},
-
-{
-  field: 'actions',
-
-  headerName:
-    'Actions',
-
-  render:
-    (row: Role) => (
-
-     <RoleActions
-
-  onOpen={() => {
-
-    router.push(
-      `/setting/roles/${row.id}`,
+    await updateRole(
+      id,
+      data,
     );
-  }}
 
-  onEdit={() => {
+    setEditOpen(
+      false,
+    );
 
-    setSelectedRole(row);
+    await loadRoles();
+  }
 
-    setEditOpen(true);
-  }}
+  async function handleDeleteRole() {
 
-  onDelete={() => {
+    if (
+      !selectedRole
+    ) {
+      return;
+    }
 
-    setSelectedRole(row);
+    await deleteRole(
+      selectedRole.id,
+    );
 
-    setDeleteOpen(true);
-  }}
+    setDeleteOpen(
+      false,
+    );
 
-/>
+    await loadRoles();
+  }
 
-    ),
-},
+  const filteredRoles =
+    roles.filter(
+      (role) => {
 
-];
+        const q =
+          search.toLowerCase();
 
-return (
+        return (
 
-<AppPage
+          role.name
+            .toLowerCase()
+            .includes(q)
 
-  title="Roles"
+          ||
 
-  subtitle="
+          role.code
+            .toLowerCase()
+            .includes(q)
 
-Manage tenant roles and permissions"
+          ||
 
->
+          role.description
+            ?.toLowerCase()
+            .includes(q)
+        );
+      },
+    );
 
-  <AppToolbar>
+  const paginatedRoles =
+    filteredRoles.slice(
 
-    <Button
-      variant="contained"
-      onClick={() =>
-        setCreateOpen(
-          true,
-        )
-      }
+      (page - 1) *
+        pageSize,
+
+      page *
+        pageSize,
+    );
+
+  const totalPages =
+    Math.ceil(
+
+      filteredRoles.length /
+        pageSize,
+    );
+
+  const columns = [
+
+    {
+      field: 'name',
+      headerName:
+        'Name',
+    },
+
+    {
+      field: 'code',
+      headerName:
+        'Code',
+
+      render:
+        (row: Role) => (
+
+          <Chip
+            size="small"
+            label={
+              row.code
+            }
+          />
+
+        ),
+    },
+
+    {
+      field:
+        'description',
+
+      headerName:
+        'Description',
+    },
+
+    {
+      field:
+        'actions',
+
+      headerName:
+        'Actions',
+
+      render:
+        (row: Role) => (
+
+          <RoleActions
+
+            onOpen={() => {
+
+              router.push(
+                `/setting/roles/${row.id}`,
+              );
+            }}
+
+            onEdit={() => {
+
+              setSelectedRole(
+                row,
+              );
+
+              setEditOpen(
+                true,
+              );
+            }}
+
+            onDelete={() => {
+
+              setSelectedRole(
+                row,
+              );
+
+              setDeleteOpen(
+                true,
+              );
+            }}
+
+          />
+
+        ),
+    },
+  ];
+
+  return (
+
+    <AppPage
+
+      title="Roles"
+
+      subtitle="Manage tenant roles and permissions"
+
     >
 
-      Add Role
+      <AppToolbar>
 
-    </Button>
+        <input
 
-  </AppToolbar>
+          placeholder="Search roles..."
 
-  <div
-    style={{
-      display: 'grid',
-      gridTemplateColumns:
-        '1fr 350px',
-      gap: 24,
-    }}
-  >
+          value={search}
 
-    <div>
+          onChange={(e) => {
 
-      <AppTable
-        columns={columns}
-        rows={roles}
+            setSearch(
+              e.target.value,
+            );
+
+            setPage(1);
+          }}
+
+          style={{
+
+            width: 280,
+
+            padding: 10,
+
+            border:
+              '1px solid #ddd',
+
+            borderRadius: 8,
+          }}
+        />
+
+        <Button
+
+          variant="contained"
+
+          onClick={() =>
+            setCreateOpen(
+              true,
+            )
+          }
+        >
+
+          Add Role
+
+        </Button>
+
+      </AppToolbar>
+
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns:
+            '1fr 350px',
+          gap: 24,
+        }}
+      >
+
+        <div>
+
+          <AppTable
+
+            columns={
+              columns
+            }
+
+            rows={
+              paginatedRoles
+            }
+
+          />
+
+          <div
+
+            style={{
+
+              display: 'flex',
+
+              justifyContent:
+                'space-between',
+
+              marginTop: 16,
+            }}
+          >
+
+            <Button
+
+              disabled={
+                page === 1
+              }
+
+              onClick={() =>
+                setPage(
+                  page - 1,
+                )
+              }
+            >
+
+              Previous
+
+            </Button>
+
+            <span>
+
+              Page {page}
+              {' / '}
+              {totalPages || 1}
+
+            </span>
+
+            <Button
+
+              disabled={
+                page >=
+                totalPages
+              }
+
+              onClick={() =>
+                setPage(
+                  page + 1,
+                )
+              }
+            >
+
+              Next
+
+            </Button>
+
+          </div>
+
+        </div>
+
+        <AIActionPanel />
+
+      </div>
+
+      <CreateRoleDialog
+        open={createOpen}
+        onClose={() =>
+          setCreateOpen(
+            false,
+          )
+        }
+        onSave={
+          handleCreateRole
+        }
       />
 
-    </div>
+      <EditRoleDialog
+        open={editOpen}
+        role={
+          selectedRole ||
+          undefined
+        }
+        onClose={() =>
+          setEditOpen(
+            false,
+          )
+        }
+        onSave={
+          handleEditRole
+        }
+      />
 
-    <div>
+      <DeleteRoleDialog
+        open={deleteOpen}
+        roleName={
+          selectedRole?.name
+        }
+        onClose={() =>
+          setDeleteOpen(
+            false,
+          )
+        }
+        onConfirm={
+          handleDeleteRole
+        }
+      />
 
-      <AIActionPanel />
+    </AppPage>
 
-    </div>
-
-  </div>
-
-  <CreateRoleDialog
-
-    open={createOpen}
-
-    onClose={() =>
-      setCreateOpen(
-        false,
-      )
-    }
-
-    onSave={
-      handleCreateRole
-    }
-
-  />
-
-  <EditRoleDialog
-
-    open={editOpen}
-
-    role={
-      selectedRole ||
-      undefined
-    }
-
-    onClose={() =>
-      setEditOpen(
-        false,
-      )
-    }
-
-    onSave={
-      handleEditRole
-    }
-
-  />
-
-  <DeleteRoleDialog
-
-    open={deleteOpen}
-
-    roleName={
-      selectedRole?.name
-    }
-
-    onClose={() =>
-      setDeleteOpen(
-        false,
-      )
-    }
-
-    onConfirm={
-      handleDeleteRole
-    }
-
-  />
-
-</AppPage>
-
-);
+  );
 }

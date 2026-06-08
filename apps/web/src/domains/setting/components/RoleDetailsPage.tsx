@@ -26,7 +26,8 @@ import {
 
 import RolePermissionsCard
 from './RolePermissionsCard';
-
+import RoleUsersCard
+from './RoleUsersCard';
 interface Role {
 
   id: string;
@@ -200,31 +201,9 @@ RoleDetailsPage() {
           }}
         >
 
-          <Card>
-
-            <CardContent>
-
-              <Typography
-                variant="h6"
-              >
-                Assigned Users
-              </Typography>
-
-              <Divider
-                sx={{
-                  my: 2,
-                }}
-              />
-
-              <Typography>
-
-                Coming Soon
-
-              </Typography>
-
-            </CardContent>
-
-          </Card>
+         <RoleUsersCard
+  roleId={role.id}
+/>
 
         </Grid>
 

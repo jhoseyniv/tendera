@@ -59,6 +59,8 @@ import {
 import { TenantsModule } from './tenants/tenants.module';
 import { PermissionsModule }
 from './modules/permissions/permissions.module';
+import { UsersModule }
+from './modules/users/users.module';
 
 @Module({
 
@@ -74,6 +76,7 @@ from './modules/permissions/permissions.module';
     TenantsModule,
     RolesModule,
     PermissionsModule,
+    UsersModule,
 
   ],
 })

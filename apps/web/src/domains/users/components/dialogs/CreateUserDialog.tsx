@@ -11,7 +11,6 @@ import {
   DialogActions,
   Button,
   TextField,
-  Stack,
 } from '@mui/material';
 
 import AppSnackbar
@@ -24,37 +23,33 @@ interface Props {
   onClose: () => void;
 
   onSave: (
-    data: {
-      name: string;
-      code: string;
-      description: string;
-    }
+    data: any,
   ) => Promise<void>;
 }
 
-export default function CreateRoleDialog({
+export default function
+CreateUserDialog({
 
   open,
 
   onClose,
 
   onSave,
-
 }: Props) {
 
   const [
-    name,
-    setName,
+    firstName,
+    setFirstName,
   ] = useState('');
 
   const [
-    code,
-    setCode,
+    lastName,
+    setLastName,
   ] = useState('');
 
   const [
-    description,
-    setDescription,
+    email,
+    setEmail,
   ] = useState('');
 
   const [
@@ -83,15 +78,15 @@ export default function CreateRoleDialog({
 
       await onSave({
 
-        name,
+        firstName,
 
-        code,
+        lastName,
 
-        description,
+        email,
       });
 
       setSnackbarMessage(
-        'Role created successfully',
+        'User created successfully',
       );
 
       setSnackbarSeverity(
@@ -102,9 +97,9 @@ export default function CreateRoleDialog({
         true,
       );
 
-      setName('');
-      setCode('');
-      setDescription('');
+      setFirstName('');
+      setLastName('');
+      setEmail('');
 
       onClose();
 
@@ -114,7 +109,7 @@ export default function CreateRoleDialog({
 
         error?.response?.data?.message ??
 
-        'Failed to create role',
+        'Failed to create user',
       );
 
       setSnackbarSeverity(
@@ -139,49 +134,48 @@ export default function CreateRoleDialog({
       >
 
         <DialogTitle>
-          Create Role
+
+          Create User
+
         </DialogTitle>
 
         <DialogContent>
 
-          <Stack
-            spacing={2}
-            sx={{ mt: 1 }}
-          >
+          <TextField
+            fullWidth
+            margin="normal"
+            label="First Name"
+            value={firstName}
+            onChange={e =>
+              setFirstName(
+                e.target.value,
+              )
+            }
+          />
 
-            <TextField
-              label="Name"
-              value={name}
-              onChange={e =>
-                setName(
-                  e.target.value,
-                )
-              }
-            />
+          <TextField
+            fullWidth
+            margin="normal"
+            label="Last Name"
+            value={lastName}
+            onChange={e =>
+              setLastName(
+                e.target.value,
+              )
+            }
+          />
 
-            <TextField
-              label="Code"
-              value={code}
-              onChange={e =>
-                setCode(
-                  e.target.value,
-                )
-              }
-            />
-
-            <TextField
-              label="Description"
-              multiline
-              rows={3}
-              value={description}
-              onChange={e =>
-                setDescription(
-                  e.target.value,
-                )
-              }
-            />
-
-          </Stack>
+          <TextField
+            fullWidth
+            margin="normal"
+            label="Email"
+            value={email}
+            onChange={e =>
+              setEmail(
+                e.target.value,
+              )
+            }
+          />
 
         </DialogContent>
 

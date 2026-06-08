@@ -86,4 +86,167 @@ export class PermissionsService {
       },
     });
   }
+  async getPermissionById(
+  id: string,
+) {
+
+  return this.prisma.pagePermission.findUnique({
+
+    where: {
+      id,
+    },
+  });
+}
+
+async createPermission(
+  data: any,
+) {
+
+  return this.prisma.pagePermission.create({
+
+    data,
+  });
+}
+
+async updatePermission(
+
+  id: string,
+
+  data: any,
+) {
+
+  return this.prisma.pagePermission.update({
+
+    where: {
+      id,
+    },
+
+    data,
+  });
+}
+
+async deletePermission(
+  id: string,
+) {
+
+  return this.prisma.pagePermission.delete({
+
+    where: {
+      id,
+    },
+  });
+}
+
+async getPermissionRoles(
+  permissionId: string,
+) {
+
+  return this.prisma.rolePagePermission.findMany({
+
+    where: {
+
+      page_permission_id:
+        permissionId,
+    },
+
+    include: {
+
+      role: true,
+    },
+  });
+}
+
+
+async getPermissionUsers(
+  permissionId: string,
+) {
+
+  const roles =
+    await this.prisma.rolePagePermission.findMany({
+
+      where: {
+        page_permission_id:
+          permissionId,
+      },
+
+      include: {
+
+        role: {
+
+          include: {
+
+            userRoles: {
+
+              include: {
+
+                user: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+  const users =
+    roles.flatMap(
+      rolePermission =>
+
+        rolePermission.role.userRoles.map(
+          userRole =>
+            userRole.user,
+        ),
+    );
+
+  const uniqueUsers =
+    users.filter(
+
+      (
+        user,
+        index,
+        self,
+      ) =>
+
+        index ===
+        self.findIndex(
+          u =>
+            u.id ===
+            user.id,
+        ),
+    );
+
+  return uniqueUsers;
+}
+async assignRoleToPermission(
+  permissionId: string,
+  roleId: string,
+) {
+
+  return this.prisma.rolePagePermission.create({
+
+    data: {
+
+      role_id: roleId,
+
+      page_permission_id:
+        permissionId,
+    },
+  });
+}
+
+async removeRoleFromPermission(
+  permissionId: string,
+  roleId: string,
+) {
+
+  return this.prisma.rolePagePermission.deleteMany({
+
+    where: {
+
+      role_id: roleId,
+
+      page_permission_id:
+        permissionId,
+    },
+  });
+}
 }

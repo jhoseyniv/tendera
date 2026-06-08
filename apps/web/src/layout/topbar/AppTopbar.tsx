@@ -115,12 +115,13 @@ export default function AppTopbar() {
           }
         >
 
-          <Avatar>
+        <Avatar>
 
-            {user?.email?.[0]
-              ?.toUpperCase() || 'U'}
+          {user?.email
+            ? user.email[0].toUpperCase()
+            : ''}
 
-          </Avatar>
+        </Avatar>
 
         </IconButton>
 

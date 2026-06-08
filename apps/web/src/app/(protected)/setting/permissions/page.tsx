@@ -1,8 +1,10 @@
-'use client';
+import PermissionsPage
+from '@/domains/setting/components/PermissionsPage';
 
-import PermissionGuard from '@/domains/permissions/guards/PermissionGuard';
+import PermissionGuard
+from '@/domains/permissions/guards/PermissionGuard';
 
-export default function PermissionsPage() {
+export default function Page() {
 
   return (
 
@@ -10,16 +12,9 @@ export default function PermissionsPage() {
       permission="permissions"
     >
 
-      <div>
-
-        <h1>
-
-          Permissions Page
-
-        </h1>
-
-      </div>
+      <PermissionsPage />
 
     </PermissionGuard>
+
   );
 }
